@@ -1,3 +1,6 @@
+############################
+# LEVEL 2 - RESOURCES & GET
+############################
 
 =begin
 On the setup method, set the host to api.example.com.
@@ -14,7 +17,6 @@ Assert the response status code is 200 - Success.
 Parse the response.body from json into a Ruby hash.
 Make sure John is included in the body, and that Allan is not.
 =end
-
 class ListingHumansTest < ActionDispatch::IntegrationTest
   setup { host! 'api.example.com' }
   john 	= Human.create(name: 'John', brain_type: 'small')
@@ -59,6 +61,7 @@ module API
     end
   end
 end
+
 
 =begin
 We will now add the ability to retrieve one specific human
@@ -111,12 +114,116 @@ set to large using query string parameters.
 curl http://cs-zombies-dev.com:3000/humans?brain_type=large
 
 
+##################################
+#   LEVEL 3 - CONTENT NEGOTIATION
+##################################
+
+=begin
+It’s time to improve the way our API determines the best response representation for different types of clients.
+Let’s start by writing a test to ensure our API is able to serve humans resources in JSON.
+
+Issue a GET request to the humans resource URI. Use the proper request header to ask for the JSON Mime Type.
+
+Assert that the response status is 200 - Success and the response Content-Type is set to JSON.
+=end
+class ListingHumansTest < ActionDispatch::IntegrationTest
+  test 'returns humans in JSON' do
+    get '/humans', {}, {'Accept' => Mime::JSON}
+
+    assert_equal 200, response.status
+    assert_equal Mime::JSON, response.content_type
+  end
+end
 
 
+=begin
+Call the respond_to method, which takes a block with a single argument named format.
+
+Inside the block, use the format object to respond back with humans in JSON format and with a 200 - Success status code.
+
+Now use the format object to respond back with humans in XML format and with a 200 - Success status code.
+=end
+class HumansController < ApplicationController
+  def index
+    humans = Human.all
+
+    # your code here
+    respond_to do |format|
+      format.json { render json: humans, status: 200 }
+      format.xml  { render xml: humans, status: 200 }
+    end
+  end
+end
 
 
+=begin
+Issue a GET request to the humans resources URI. Specify the accepted language as en and the accepted Mime Type as JSON.
+
+Using assert_equal, check for a 200 - Success status code.
+
+We’ve selected the first human out of the array for you, and assigned it to the human variable. Using that human, assert its :message property is set to “My name is #{human[:name]} and I am alive!”.
+=end
+class ChangingLocalesTest < ActionDispatch::IntegrationTest
+  test 'returns list of humans in English' do
+    get '/humans', {}, {'Accept' => Mime::JSON, 'Accept-Language' => 'en'}
+    # assertion here
+    assert_equal response.status, 200
+
+    human = json(response.body).first
+    # assertion here
+    assert_equal human[:message], "My name is #{human[:name]} and I am alive!"
+  end
+end
 
 
+=begin
+Create a controller callback that calls the set_locale method everytime a new request comes in. Define this method, but don’t worry about implementing it just yet. By following the convention for controller callback methods, mark this method as protected.
+
+Now it is time to implement the set_locale method. This method reads from the Accept-Language request header and sets the application’s locale with the value from it.
+=end
+class ApplicationController < ActionController::Base
+  protect_from_forgery with: :exception
+  before_action :set_locale
+
+  protected
+
+  def set_locale
+    I18n.locale = request.headers['Accept-Language']
+  end
+end
 
 
+#########################################
+#  LEVEL 4 - POST, PUT, PATCH, & DELETE
+#########################################
 
+=begin
+Our web API needs an end point to register humans who have
+survived the Zombie Apocalypse. We will start by writing some integration
+tests for the POST method. These tests will ensure that only valid humans
+can be created and that our API generates the proper response. Use the
+following data for creating a valid
+human: { human: { name: 'John', brain_type: 'small' } }.to_json.
+
+Use the post method to issue a request to the humans resource URI.
+The request will need to include valid human data as its second argument.
+The third argument will need to send in a hash that tells the server that
+our request expects the response to be in JSON, and that the payload we
+are sending is also in JSON.
+
+Assert the response status code is 201 - Created.
+
+Assert the Content-Type response header is Mime::JSON.
+
+=end
+class CreatingHumansTest < ActionDispatch::IntegrationTest
+  test 'creates human' do
+    post '/humans',
+      { human:
+        {name: 'John', brain_type: 'small'}
+      }.to_json,
+      { 'Accept' => Mime::JSON, 'Content-Type' => Mime::JSON.to_s }
+
+    assert_equal response.status, 201
+  end
+end
