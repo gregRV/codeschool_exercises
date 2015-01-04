@@ -227,3 +227,46 @@ class CreatingHumansTest < ActionDispatch::IntegrationTest
     assert_equal response.status, 201
   end
 end
+
+
+=begin
+Our API is stateless. This means we don’t need to worry about managing sessions between requests, or exceptions caused by invalid authenticity tokens.
+
+Change the protect_from_forgery method to null out the session, in case of invalid authenticity tokens.
+=end
+class ApplicationController < ActionController::Base
+  protect_from_forgery with: :null_session
+end
+
+4.7
+curl -i -X POST -d 'human[name]=Ash' \ http://cs-zombies-dev.com:3000/humans
+
+4.13
+    human.update(human_params)
+    render json: human
+
+=begin
+For unsuccessful POST requests, our API needs to respond with the errors that prevented the request from being fulfilled, along with the proper status code.
+
+If a new human cannot be saved, then respond with the errors in JSON.
+
+Now set the 422 - Unprocessable Entity status code when responding with the errors.
+=end
+class HumansController < ApplicationController
+  def create
+    human = Human.new(human_params)
+
+    if human.save
+      head 204, location: human
+    else
+      render json: human.errors, status: 422
+    end
+  end
+
+  private
+
+  def human_params
+    params.require(:human).permit(:name, :brain_type)
+  end
+end
+
