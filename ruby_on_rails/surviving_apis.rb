@@ -270,3 +270,51 @@ class HumansController < ApplicationController
   end
 end
 
+
+#######################
+# LEVEL 5 - VERSIONING
+#######################
+# Set the proper request header used for versioning, with the value for our new custom media type of application/vnd.zombies.v1+json.
+# Assert the Content-Type on the response is set to JSON.
+# Now parse the response body and assert that there is a message property set to "This is version one". Check the test/test_helper.rb file on the secondary tab for a helper method that can help save some time.
+class ListingZombiesTest < ActionDispatch::IntegrationTest
+  test 'show zombie from API version 1' do
+    get '/zombies/1', {}, { 'Accept' => 'application/vnd.zombies.v1+json' }
+    assert_equal 200, response.status
+    assert_equal Mime::JSON, response.content_type
+    assert_equal json(response.body)[:message], 'This is version one'
+  end
+end
+
+
+# The default_version argument on the constructor needs to have a default value of false.
+# The check_headers method needs to read from the Accept header, which can return either nil or an array. We’ll return true if it’s not nil and if it includes application/vnd.zombies.#{@version}+json.
+class ApiVersion
+
+  def initialize(version, default_version = false) # Task 1
+    @version, @default_version = version, default_version
+  end
+
+  def matches?(request)
+    @default_version || check_headers(request.headers)
+  end
+
+  private
+    def check_headers(headers)
+      accept = headers['Accept']
+      accept && accept.include?("application/vnd.zombies.#{@version}+json")
+    end
+end
+
+# With our ApiVersion class in place, all that’s left to do is use this class on our routes file. We’ll need create two ApiVersion objects - one for each API version that we need to support. Don’t forget to indicate that version 2 is the default API version!
+
+
+
+
+
+
+
+
+
+
+
