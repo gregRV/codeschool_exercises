@@ -238,9 +238,6 @@ class ApplicationController < ActionController::Base
   protect_from_forgery with: :null_session
 end
 
-4.7
-curl -i -X POST -d 'human[name]=Ash' \ http://cs-zombies-dev.com:3000/humans
-
 4.13
     human.update(human_params)
     render json: human
@@ -307,6 +304,36 @@ class ApiVersion
 end
 
 # With our ApiVersion class in place, all that’s left to do is use this class on our routes file. We’ll need create two ApiVersion objects - one for each API version that we need to support. Don’t forget to indicate that version 2 is the default API version!
+# First, require the ApiVersion class file, which lives under the lib folder. The lib folder is currently added to the Rails load path.
+# Set the v1 module constraint to a new object from the ApiVersion class. This object should be initialized to version v1.
+# Set the v2 module constraint to a new object from the ApiVersion class. This object should be initialized to version v2 and this is the default API version.
+require 'api_version'
+
+SurvivingRails::Application.routes.draw do
+  scope defaults: { format: 'json' } do
+    scope module: :v1, constraints: ApiVersion.new('v1') do # Task 2
+      resources :zombies
+    end
+    scope module: :v2, constraints: ApiVersion.new('v2', true) do # Task 3
+      resources :zombies
+    end
+  end
+end
+
+
+###########################
+# LEVEL 6 - AUTHENTICATION
+###########################
+
+class ListingZombiesTest < ActionDispatch::IntegrationTest
+  setup { @user = User.create! }
+
+  test 'valid token lists zombies' do
+    get '/zombies', {}, { 'Authorization' => token_header(@user.auth_token) }
+    assert_equal response.status, 200
+    assert_equal response.content_type, Mime::JSON
+  end
+end
 
 
 
